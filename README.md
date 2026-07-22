@@ -28,6 +28,9 @@ This prototype explores one narrow part of that challenge: browser-based face-pr
 - Google MediaPipe Face Detection for face counting
 - Detection states for no face, one face, and multiple faces
 - Transparent rule-based integrity risk score and recommendation
+- Session-only alert history with consecutive-event deduplication
+- Live session statistics and an end-of-session summary
+- Face-position and apparent camera-distance guidance from the MediaPipe face box
 - Responsive reviewer dashboard with monitoring cards, event log, and risk panel
 - Loading, backend-error, and retry states in the dashboard
 - CORS configuration for the React development server at `http://localhost:5173`
@@ -56,6 +59,9 @@ Frame Decoder (Base64 JPEG -> OpenCV BGR frame)
 MediaPipe Face Detection
       |
       v
+Face Position and Distance Validation
+      |
+      v
 Rule-Based Risk Engine
       |
       v
@@ -76,8 +82,9 @@ React Reviewer Dashboard
 5. The frontend sends `frame_id`, `timestamp`, and `image` to `POST /analyze`.
 6. FastAPI decodes the JPEG payload into an OpenCV frame.
 7. MediaPipe Face Detection counts faces in that frame.
-8. The rule engine maps the face-count state to a risk score, status, and recommendation.
-9. The dashboard displays the returned score, signals, and recommendation without changing the response schema.
+8. The MediaPipe face bounding box provides position and apparent distance guidance when exactly one face is detected.
+9. The rule engine maps the face-count state to a risk score, status, and recommendation.
+10. The dashboard displays the returned score, signals, alert history, and session statistics.
 
 ## 🛠️ Technologies Used
 
@@ -99,7 +106,7 @@ Interview-Integrity-Detector/
 │   ├── src/
 │   │   ├── api/                 Axios client and endpoint functions
 │   │   ├── components/          Reusable dashboard and camera UI
-│   │   ├── hooks/               Five-second monitoring polling hook
+│   │   ├── hooks/               Monitoring polling and session statistics hooks
 │   │   ├── pages/               Landing, consent, and interview pages
 │   │   └── types/               API contract TypeScript interfaces
 │   ├── package.json
@@ -196,6 +203,8 @@ Response body:
     "head_pose": "Pending",
     "attention": "Pending"
   },
+  "face_position": "Centered",
+  "face_distance": "Normal Distance",
   "recommendation": "Monitoring"
 }
 ```
@@ -214,7 +223,9 @@ The current risk engine is deterministic and face-count based. Scores are clampe
 
 Today, the project can capture a webcam preview in the browser, package current frames efficiently for REST transfer, and use MediaPipe Face Detection on the server to identify whether there are zero, one, or multiple faces. The dashboard reflects the returned face signal, risk score, status, and recommendation during its five-second polling cycle.
 
-The landing page, consent page, interview monitoring workspace, timer, event log, signal cards, and risk sidebar are all implemented. The browser owns the camera, while the backend processes only the image data it receives.
+The dashboard keeps a current-session alert history, avoiding consecutive duplicate face-status alerts. It also tracks duration, processed frames, alert count, current risk, average risk, and maximum risk, then shows an end-of-session summary when the interviewer ends the session.
+
+For exactly one detected face, the backend uses the existing MediaPipe relative bounding box to provide face-position and apparent camera-distance guidance. The browser owns the camera, while the backend processes only the image data it receives.
 
 ## 🔮 Future Enhancements
 
@@ -231,6 +242,7 @@ The landing page, consent page, interview monitoring workspace, timer, event log
 
 - This is a hackathon prototype, not a complete production integrity platform.
 - Current analysis is limited to face presence and face count in individual submitted frames.
+- Face position and apparent distance are simple bounding-box heuristics, not identity, gaze, or pose analysis.
 - Camera permission is required for browser-frame monitoring.
 - The current health endpoint still returns a static scaffold payload.
 - A human reviewer should make the final decision using full interview context.

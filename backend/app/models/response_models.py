@@ -21,7 +21,7 @@ class HealthResponse(BaseModel):
 
 
 class SignalStatus(BaseModel):
-    """Placeholder monitoring signal states."""
+    """Current and future monitoring signal states."""
 
     camera: str
     face_detection: str
@@ -31,9 +31,11 @@ class SignalStatus(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    """Mock response schema for future analysis endpoint integration."""
+    """Monitoring response returned for one browser-provided frame."""
 
     risk_score: int
     status: str
     signals: SignalStatus
+    face_position: str
+    face_distance: str
     recommendation: str

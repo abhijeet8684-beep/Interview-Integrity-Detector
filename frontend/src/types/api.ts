@@ -31,5 +31,7 @@ export interface AnalyzeResponse {
   risk_score: number
   status: string
   signals: SignalStatus
+  face_position: string
+  face_distance: string
   recommendation: string
 }

@@ -6,13 +6,18 @@ function formatTime(totalSeconds: number) {
   return `${minutes}:${seconds}`
 }
 
-function Timer() {
+interface TimerProps {
+  isRunning?: boolean
+}
+
+function Timer({ isRunning = true }: TimerProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   useEffect(() => {
+    if (!isRunning) return
     const timer = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [isRunning])
 
   return (
     <div className="text-right">

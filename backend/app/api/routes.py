@@ -34,5 +34,5 @@ async def get_health() -> HealthResponse:
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_frame(request: AnalyzeRequest) -> AnalyzeResponse:
-    """Analyze one locally captured webcam frame without changing the API schema."""
+    """Analyze one browser-provided webcam frame without changing the API schema."""
     return await run_in_threadpool(monitoring_service.analyze, request)

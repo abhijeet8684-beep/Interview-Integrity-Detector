@@ -7,14 +7,19 @@ const POLLING_INTERVAL_MS = 5_000
 
 interface MonitoringDataState {
   data: AnalyzeResponse | null
+  framesProcessed: number
   error: boolean
   isLoading: boolean
   retry: () => void
 }
 
 /** Captures browser frames and polls the backend while the interview page is mounted. */
-export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataState {
+export function useMonitoringData(
+  captureFrame: FrameCapture,
+  isPollingEnabled = true,
+): MonitoringDataState {
   const [data, setData] = useState<AnalyzeResponse | null>(null)
+  const [framesProcessed, setFramesProcessed] = useState(0)
   const [error, setError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const frameId = useRef(0)
@@ -23,7 +28,7 @@ export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataSta
   const isMounted = useRef(true)
 
   const loadMonitoringData = useCallback(async () => {
-    if (requestInFlight.current) return
+    if (!isPollingEnabled || requestInFlight.current) return
 
     const image = captureFrame()
     if (!image) return
@@ -35,6 +40,7 @@ export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataSta
       const response = await analyzeFrame({ frame_id: ++frameId.current, timestamp: new Date().toISOString(), image }, controllerRef.current.signal)
       if (isMounted.current) {
         setData(response)
+        setFramesProcessed((count) => count + 1)
         setError(false)
       }
     } catch (requestError) {
@@ -46,9 +52,14 @@ export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataSta
       requestInFlight.current = false
       if (isMounted.current) setIsLoading(false)
     }
-  }, [captureFrame])
+  }, [captureFrame, isPollingEnabled])
 
   useEffect(() => {
+    if (!isPollingEnabled) {
+      controllerRef.current?.abort()
+      return
+    }
+
     isMounted.current = true
     void loadMonitoringData()
     const intervalId = window.setInterval(() => void loadMonitoringData(), POLLING_INTERVAL_MS)
@@ -57,12 +68,13 @@ export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataSta
       window.clearInterval(intervalId)
       controllerRef.current?.abort()
     }
-  }, [loadMonitoringData])
+  }, [isPollingEnabled, loadMonitoringData])
 
   const retry = useCallback(() => {
+    if (!isPollingEnabled) return
     setIsLoading(true)
     void loadMonitoringData()
-  }, [loadMonitoringData])
+  }, [isPollingEnabled, loadMonitoringData])
 
-  return { data, error, isLoading, retry }
+  return { data, framesProcessed, error, isLoading, retry }
 }
