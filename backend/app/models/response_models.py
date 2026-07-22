@@ -30,6 +30,23 @@ class SignalStatus(BaseModel):
     attention: str
 
 
+class HeadPoseResponse(BaseModel):
+    """Euler angles estimated from MediaPipe Face Mesh landmarks."""
+
+    yaw: float | None
+    pitch: float | None
+    roll: float | None
+
+
+class BehaviorResponse(BaseModel):
+    """Supplementary behavior observations for one analyzed frame."""
+
+    gaze_direction: str
+    head_pose: HeadPoseResponse
+    behavior_alerts: list[str]
+    behavior_risk: int
+
+
 class AnalyzeResponse(BaseModel):
     """Monitoring response returned for one browser-provided frame."""
 
@@ -38,4 +55,5 @@ class AnalyzeResponse(BaseModel):
     signals: SignalStatus
     face_position: str
     face_distance: str
+    behavior: BehaviorResponse
     recommendation: str

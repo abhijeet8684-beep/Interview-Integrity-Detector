@@ -40,6 +40,8 @@ This prototype addresses one limited part of that challenge through browser-base
 - Deterministic risk score, status, and recommendation
 - Face-position guidance from MediaPipe relative bounding-box data
 - Apparent camera-distance validation from MediaPipe face-box area
+- Independent Face Mesh behavior analysis for coarse gaze and head-pose observations
+- Behavior alerts for prolonged off-screen gaze and persistent head orientation
 - Session-only alert history with timestamps and consecutive-event deduplication
 - Live session duration, frames processed, alert count, current, average, and maximum risk statistics
 - End-of-session monitoring summary
@@ -87,6 +89,10 @@ MediaPipe Face Detection
 Face Position / Distance         Rule-Based Risk Engine
       |                              |
       +--------------+---------------+
+                     |
+                     v
+       MediaPipe Face Mesh Behavior Analysis
+                     |
                      v
               AnalyzeResponse
                      |
@@ -107,7 +113,8 @@ Face Position / Distance         Rule-Based Risk Engine
 7. MediaPipe Face Detection determines the face count and returns a relative face bounding box when exactly one face is present.
 8. The backend derives face-position and apparent camera-distance guidance from that bounding box.
 9. The rule engine produces the risk score, status, and recommendation.
-10. The dashboard updates signals, alert history, and session statistics from the response.
+10. Face Mesh estimates coarse gaze direction and head pose; repeated observations can add behavior alerts and risk.
+11. The dashboard updates signals, behavior analysis, alert history, and session statistics from the response.
 
 ## 🔌 Backend API
 
@@ -144,6 +151,12 @@ Response body:
   },
   "face_position": "Centered",
   "face_distance": "Normal Distance",
+  "behavior": {
+    "gaze_direction": "CENTER",
+    "head_pose": { "yaw": 2.1, "pitch": -1.3, "roll": 0.4 },
+    "behavior_alerts": [],
+    "behavior_risk": 0
+  },
   "recommendation": "Monitoring"
 }
 ```
@@ -163,6 +176,8 @@ The current risk engine is deterministic and based only on face-count state. Sco
 The current implementation captures browser webcam frames, transfers them to FastAPI as Base64 JPEG data, and applies MediaPipe face detection to identify zero, one, or multiple faces. The dashboard refreshes the monitoring response every five seconds while the session is active.
 
 For exactly one detected face, the backend uses the existing MediaPipe relative bounding box to provide face-position and apparent camera-distance guidance. The dashboard also keeps a current-session alert history, avoids consecutive duplicate face-state alerts, and tracks duration, processed frames, alert count, current risk, average risk, and maximum risk.
+
+Behavior analysis runs independently alongside face detection. It uses MediaPipe Face Mesh landmarks for coarse gaze direction and OpenCV `solvePnP()` for head-pose angles. Repeated off-screen gaze or yaw beyond the configured threshold can add behavior risk and alerts without changing the original face-count rules.
 
 When the interviewer ends the session, polling stops and the dashboard presents a monitoring summary. These values remain decision-support information; a human reviewer should make the final decision using full interview context.
 
@@ -286,7 +301,8 @@ Interview-Integrity-Detector/
 
 - This is a hackathon prototype, not a complete production integrity platform.
 - Current analysis is limited to face count and simple face-box framing heuristics for individual submitted frames.
-- Face-position and camera-distance guidance are not identity, gaze, head-pose, or emotion analysis.
+- Face-position and camera-distance guidance are simple bounding-box heuristics, not identity, gaze, head-pose, or emotion analysis.
+- Gaze and head-pose observations are coarse landmark-based signals and are not identity, intent, or emotion analysis.
 - Browser camera permission is required.
 - The health endpoint currently returns a static scaffold payload.
 - Human reviewers should make final decisions using full interview context.

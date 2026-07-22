@@ -31,3 +31,12 @@ class RiskEngine:
         if score <= 50:
             return RiskAssessment(score, "Attention Required", "Review Session")
         return RiskAssessment(score, "High Risk", "Investigate")
+
+    def add_behavior_risk(self, assessment: RiskAssessment, contribution: int) -> RiskAssessment:
+        """Append behavior risk without changing existing face-count score rules."""
+        score = max(0, min(assessment.score + contribution, 100))
+        if score <= 20:
+            return RiskAssessment(score, "System Ready", "Monitoring")
+        if score <= 50:
+            return RiskAssessment(score, "Attention Required", "Review Session")
+        return RiskAssessment(score, "High Risk", "Investigate")

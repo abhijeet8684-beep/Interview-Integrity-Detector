@@ -27,11 +27,25 @@ export interface SignalStatus {
   attention: string
 }
 
+export interface HeadPose {
+  yaw: number | null
+  pitch: number | null
+  roll: number | null
+}
+
+export interface BehaviorAnalysis {
+  gaze_direction: string
+  head_pose: HeadPose
+  behavior_alerts: string[]
+  behavior_risk: number
+}
+
 export interface AnalyzeResponse {
   risk_score: number
   status: string
   signals: SignalStatus
   face_position: string
   face_distance: string
+  behavior: BehaviorAnalysis
   recommendation: string
 }

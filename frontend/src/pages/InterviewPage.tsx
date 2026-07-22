@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CameraView from '../components/CameraView'
 import type { FrameCapture } from '../components/CameraView'
+import BehaviorAnalysisCard from '../components/BehaviorAnalysisCard'
 import EventLog from '../components/EventLog'
 import RiskCard from '../components/RiskCard'
 import SessionStatisticsCard from '../components/SessionStatisticsCard'
@@ -40,6 +41,7 @@ function InterviewPage() {
           {error && !isSessionEnded && <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span>Unable to connect to monitoring backend.</span><button type="button" onClick={retry} className="rounded-lg bg-amber-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-amber-800">Retry</button></div>}
           <CameraView onFrameCaptureReady={registerFrameCapture} />
           <section><div className="mb-4"><h2 className="font-semibold text-slate-900">Monitoring signals</h2><p className="mt-1 text-sm text-slate-500">Live values are refreshed from the monitoring backend every five seconds.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{monitoringSignals.map((signal) => <SignalCard key={signal.key} name={signal.name} description={signal.description} status={data?.signals[signal.key] ?? 'Waiting...'} />)}<SignalCard name="Face Position" description="Guidance based on the MediaPipe face box." status={data?.face_position ?? 'Waiting...'} /><SignalCard name="Camera Position" description="Apparent camera distance from the MediaPipe face box." status={data?.face_distance ?? 'Waiting...'} /></div></section>
+          <BehaviorAnalysisCard behavior={data?.behavior ?? null} />
           <SessionStatisticsCard statistics={statistics} recommendation={data?.recommendation ?? 'Monitoring'} />
           {isSessionEnded && <SessionStatisticsCard statistics={statistics} recommendation={data?.recommendation ?? 'Monitoring'} summary />}
           <EventLog alerts={statistics.alerts} />
