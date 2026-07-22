@@ -1,5 +1,7 @@
+import { useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import CameraView from '../components/CameraView'
+import type { FrameCapture } from '../components/CameraView'
 import EventLog from '../components/EventLog'
 import RiskCard from '../components/RiskCard'
 import SignalCard from '../components/SignalCard'
@@ -16,7 +18,12 @@ const monitoringSignals = [
 ] as const
 
 function InterviewPage() {
-  const { data, error, isLoading, retry } = useMonitoringData()
+  const frameCaptureRef = useRef<FrameCapture>(() => null)
+  const registerFrameCapture = useCallback((captureFrame: FrameCapture) => {
+    frameCaptureRef.current = captureFrame
+  }, [])
+  const captureFrame = useCallback(() => frameCaptureRef.current(), [])
+  const { data, error, isLoading, retry } = useMonitoringData(captureFrame)
 
   return (
     <div className="min-h-screen bg-slate-100 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -29,7 +36,7 @@ function InterviewPage() {
           <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-slate-500">Live session</p><h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Interview in progress</h2></div><div className="flex flex-wrap gap-2"><StatusBadge label={data?.signals.camera ?? 'Waiting...'} tone="success" /><StatusBadge label={data?.signals.face_detection ?? 'Waiting...'} tone="info" /><StatusBadge label={data?.status ?? 'Waiting for Backend'} /></div></div>
           {isLoading && <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800"><span className="size-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-700" />Loading monitoring data...</div>}
           {error && <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span>Unable to connect to monitoring backend.</span><button type="button" onClick={retry} className="rounded-lg bg-amber-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-amber-800">Retry</button></div>}
-          <CameraView />
+          <CameraView onFrameCaptureReady={registerFrameCapture} />
           <section><div className="mb-4"><h2 className="font-semibold text-slate-900">Monitoring signals</h2><p className="mt-1 text-sm text-slate-500">Live values are refreshed from the monitoring backend every five seconds.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{monitoringSignals.map((signal) => <SignalCard key={signal.key} name={signal.name} description={signal.description} status={data?.signals[signal.key] ?? 'Waiting...'} />)}</div></section>
           <EventLog />
         </div>

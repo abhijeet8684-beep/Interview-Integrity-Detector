@@ -16,6 +16,7 @@ export interface HealthResponse {
 export interface AnalyzeRequest {
   frame_id: number
   timestamp: string
+  image: string
 }
 
 export interface SignalStatus {

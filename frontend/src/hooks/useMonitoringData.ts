@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeFrame } from '../api/api'
+import type { FrameCapture } from '../components/CameraView'
 import type { AnalyzeResponse } from '../types/api'
 
 const POLLING_INTERVAL_MS = 5_000
@@ -11,29 +12,27 @@ interface MonitoringDataState {
   retry: () => void
 }
 
-/** Polls the mock monitoring endpoint while the interview page is mounted. */
-export function useMonitoringData(): MonitoringDataState {
+/** Captures browser frames and polls the backend while the interview page is mounted. */
+export function useMonitoringData(captureFrame: FrameCapture): MonitoringDataState {
   const [data, setData] = useState<AnalyzeResponse | null>(null)
   const [error, setError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const frameId = useRef(0)
   const requestInFlight = useRef(false)
   const controllerRef = useRef<AbortController | null>(null)
   const isMounted = useRef(true)
 
   const loadMonitoringData = useCallback(async () => {
-    if (requestInFlight.current) {
-      return
-    }
+    if (requestInFlight.current) return
+
+    const image = captureFrame()
+    if (!image) return
 
     requestInFlight.current = true
     controllerRef.current = new AbortController()
 
     try {
-      const response = await analyzeFrame(
-        { frame_id: 1, timestamp: new Date().toISOString() },
-        controllerRef.current.signal,
-      )
-
+      const response = await analyzeFrame({ frame_id: ++frameId.current, timestamp: new Date().toISOString(), image }, controllerRef.current.signal)
       if (isMounted.current) {
         setData(response)
         setError(false)
@@ -45,17 +44,14 @@ export function useMonitoringData(): MonitoringDataState {
       }
     } finally {
       requestInFlight.current = false
-      if (isMounted.current) {
-        setIsLoading(false)
-      }
+      if (isMounted.current) setIsLoading(false)
     }
-  }, [])
+  }, [captureFrame])
 
   useEffect(() => {
     isMounted.current = true
     void loadMonitoringData()
     const intervalId = window.setInterval(() => void loadMonitoringData(), POLLING_INTERVAL_MS)
-
     return () => {
       isMounted.current = false
       window.clearInterval(intervalId)

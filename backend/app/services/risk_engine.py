@@ -18,11 +18,11 @@ class RiskEngine:
     def assess(self, face_detection_status: str) -> RiskAssessment:
         """Calculate risk from documented face-detection rules."""
         score = 0
-        if face_detection_status == "Face Missing":
+        if face_detection_status in {"Face Missing", "No Face"}:
             score += 40
         elif face_detection_status == "Multiple Faces":
             score += 60
-        elif face_detection_status == "Detected":
+        elif face_detection_status in {"Detected", "One Face Detected"}:
             score += 10
 
         score = max(0, min(score, 100))

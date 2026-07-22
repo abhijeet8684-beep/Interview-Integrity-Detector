@@ -1,6 +1,6 @@
 # Interview Integrity Detector Backend
 
-FastAPI backend for the Interview Integrity Detector. It captures a frame from the local server webcam and uses Google MediaPipe Face Detection to return the existing monitoring response contract. It does not include face recognition, eye tracking, head-pose estimation, or AI risk scoring.
+FastAPI backend for the Interview Integrity Detector. It accepts Base64 JPEG frames captured by the browser and uses Google MediaPipe Face Detection to return the existing monitoring response contract. It never opens a local webcam. It does not include face recognition, eye tracking, head-pose estimation, or AI risk scoring.
 
 ## Project structure
 
@@ -11,7 +11,7 @@ backend/
 │   ├── models/                    Pydantic request and response schemas
 │   ├── services/                  Monitoring orchestration and rule engine
 │   ├── utils/logger.py            Logging configuration
-│   ├── vision/camera.py           Local OpenCV webcam adapter
+│   ├── vision/frame_decoder.py    Base64 JPEG browser-frame decoder
 │   ├── vision/face_detector.py    MediaPipe face-count adapter
 │   ├── config.py                  Application settings and future model paths
 │   └── main.py                    FastAPI application setup
@@ -42,24 +42,25 @@ Open `http://localhost:8000/docs` for interactive API documentation.
 | --- | --- | --- |
 | GET | `/` | Application name, version, and running status |
 | GET | `/health` | Placeholder backend and dependency health state |
-| POST | `/analyze` | Captures one local webcam frame and returns dynamic face-monitoring data |
+| POST | `/analyze` | Analyzes one Base64 JPEG browser frame and returns dynamic face-monitoring data |
 
 Example request:
 
 ```json
 {
   "frame_id": 1,
-  "timestamp": "2026-07-21T12:00:00Z"
+  "timestamp": "2026-07-21T12:00:00Z",
+  "image": "base64-encoded-jpeg-data"
 }
 ```
 
 The CORS configuration allows the React development application at `http://localhost:5173`.
 
-## Local camera behavior
+## Browser-frame behavior
 
-The backend reads camera index `0`, so it must run on the same computer as the webcam. If the camera is busy, blocked by operating-system privacy settings, or unavailable, `/analyze` returns `camera: "Unavailable"` and a waiting face signal. Close other applications using the camera if access fails.
+The browser is the only camera owner. The frontend downsizes each preview frame to a maximum of approximately 640×480, encodes it as JPEG at 78% quality, and sends its Base64 content with `/analyze`. The backend never calls `cv2.VideoCapture()`.
 
-Implemented face states are `Detected`, `Face Missing`, and `Multiple Faces`. Eye tracking, head pose, and attention intentionally remain `Pending`.
+Implemented face states are `No Face`, `One Face Detected`, and `Multiple Faces`. Eye tracking, head pose, and attention intentionally remain `Pending`.
 
 ## Future roadmap
 
