@@ -1,92 +1,31 @@
 # Interview Integrity Detector
 
-> Zero-install browser-based interview integrity monitoring system powered by React, FastAPI, and MediaPipe.
+Zero-install, browser-based interview integrity monitoring prototype built for the InCruiter Hackathon challenge, **Catch the Invisible AI Cheater**.
 
-Built for the InCruiter Hackathon challenge: **Catch the Invisible AI Cheater**.
+## Project Overview
 
-## 🎯 Project Overview
+Interview Integrity Detector supports structured review of remote interview sessions. The candidate grants browser-camera permission; the React application captures a resized JPEG frame from the live preview every five seconds and sends it to the FastAPI backend for analysis.
 
-Interview Integrity Detector is a prototype for supporting structured review of remote interview sessions. A candidate grants browser-camera permission, and the React application periodically captures a resized JPEG frame from the live preview. The frame is sent to the FastAPI backend, which performs face-count monitoring and returns an explainable risk response to the dashboard.
+The backend decodes the Base64 JPEG, uses Google MediaPipe Face Detection to determine whether zero, one, or multiple faces are present, and returns an explainable rule-based risk response. The dashboard displays the latest monitoring result, session-only alert history, live statistics, and framing guidance.
 
-The system is deliberately browser-owned: the backend never opens a local webcam. It receives Base64-encoded JPEG frames through a REST endpoint, decodes them, uses Google MediaPipe Face Detection to count faces, and applies transparent rule-based scoring. The resulting score is a review signal, not a final decision.
+The browser is the only camera owner. The backend processes only the frames received through the API and does not open a local webcam.
 
-Current monitoring is limited to face presence and face count. It is designed to help a human reviewer notice conditions that may warrant attention, such as a missing face or multiple faces in a frame.
+## Features
 
-## 🧩 Problem Statement
+- React, TypeScript, and Vite frontend with responsive dashboard UI
+- Consent-first browser webcam capture
+- Base64 JPEG frame transfer to FastAPI every five seconds
+- Google MediaPipe face detection through the existing REST API
+- One-face, no-face, and multiple-face monitoring states
+- Deterministic risk score, status, and recommendation
+- Face-position guidance from MediaPipe relative bounding-box data
+- Apparent camera-distance validation from MediaPipe face-box area
+- Session-only alert history with timestamps and consecutive-event deduplication
+- Live session duration, frames processed, alert count, current, average, and maximum risk statistics
+- End-of-session monitoring summary
+- Axios API layer, typed API models, loading states, retry handling, and automatic polling cleanup
 
-Remote interviews make it harder to establish consistent interview conditions. Candidates may use a range of tools or receive assistance that is not visible to the reviewer, while interview teams still need a fair, privacy-conscious, and practical review process.
-
-This prototype explores one narrow part of that challenge: browser-based face-presence monitoring with no candidate-side installation. It does **not** claim to directly identify AI interview assistants, and it cannot guarantee detection of every form of suspicious behaviour.
-
-## ✨ Key Features
-
-- Zero-install browser workflow for the interview participant
-- Consent-first camera access flow
-- Live browser webcam preview
-- Browser-captured JPEG frames sent to the backend every five seconds
-- Base64 frame transfer over the existing REST API
-- Google MediaPipe Face Detection for face counting
-- Detection states for no face, one face, and multiple faces
-- Transparent rule-based integrity risk score and recommendation
-- Session-only alert history with consecutive-event deduplication
-- Live session statistics and an end-of-session summary
-- Face-position and apparent camera-distance guidance from the MediaPipe face box
-- Responsive reviewer dashboard with monitoring cards, event log, and risk panel
-- Loading, backend-error, and retry states in the dashboard
-- CORS configuration for the React development server at `http://localhost:5173`
-
-## 🏗️ System Architecture
-
-```text
-Browser Camera
-      |
-      v
-React CameraView
-      |
-      v
-Resize frame (max ~640 x 480) + JPEG encode (78% quality)
-      |
-      v
-Base64 image in POST /analyze
-      |
-      v
-FastAPI Backend
-      |
-      v
-Frame Decoder (Base64 JPEG -> OpenCV BGR frame)
-      |
-      v
-MediaPipe Face Detection
-      |
-      v
-Face Position and Distance Validation
-      |
-      v
-Rule-Based Risk Engine
-      |
-      v
-AnalyzeResponse
-      |
-      v
-React Reviewer Dashboard
-```
-
-> The backend does not use `cv2.VideoCapture()` and never attempts to access a local webcam. The browser remains the only camera owner.
-
-## 🔄 Detection Workflow
-
-1. The candidate starts an interview and provides camera-monitoring consent.
-2. The browser requests webcam permission and displays the local preview.
-3. While the interview page is mounted, the frontend captures a current preview frame every five seconds.
-4. The frame is downscaled to a maximum of approximately 640×480, JPEG-encoded at 78% quality, and Base64-encoded.
-5. The frontend sends `frame_id`, `timestamp`, and `image` to `POST /analyze`.
-6. FastAPI decodes the JPEG payload into an OpenCV frame.
-7. MediaPipe Face Detection counts faces in that frame.
-8. The MediaPipe face bounding box provides position and apparent distance guidance when exactly one face is detected.
-9. The rule engine maps the face-count state to a risk score, status, and recommendation.
-10. The dashboard displays the returned score, signals, alert history, and session statistics.
-
-## 🛠️ Technologies Used
+## Technology Stack
 
 | Area | Technologies |
 | --- | --- |
@@ -95,88 +34,54 @@ React Reviewer Dashboard
 | API client | Axios |
 | Backend | FastAPI, Pydantic, Uvicorn |
 | Computer vision | OpenCV, Google MediaPipe Face Detection, NumPy |
-| Communication | JSON REST API with Base64 JPEG payloads |
-| Containerization | Docker, Docker Compose |
+| Communication | JSON REST API with Base64 JPEG frames |
+| Containerization | Docker and Docker Compose |
 
-## 📁 Project Structure
+## Architecture
 
 ```text
-Interview-Integrity-Detector/
-├── frontend/
-│   ├── src/
-│   │   ├── api/                 Axios client and endpoint functions
-│   │   ├── components/          Reusable dashboard and camera UI
-│   │   ├── hooks/               Monitoring polling and session statistics hooks
-│   │   ├── pages/               Landing, consent, and interview pages
-│   │   └── types/               API contract TypeScript interfaces
-│   ├── package.json
-│   └── vite.config.ts
-├── backend/
-│   ├── app/
-│   │   ├── api/                 FastAPI routes
-│   │   ├── models/              Pydantic request and response models
-│   │   ├── services/            Monitoring orchestration and risk rules
-│   │   ├── utils/               Logging utility
-│   │   ├── vision/              Frame decoder and MediaPipe detector
-│   │   ├── config.py            Application configuration
-│   │   └── main.py              FastAPI application setup
-│   ├── requirements.txt
-│   └── README.md
-├── docs/
-├── presentation/
-├── screenshots/
-├── tests/
-├── docker-compose.yml
-└── README.md
+Browser Camera
+      |
+      v
+React CameraView
+      |
+      v
+Resize frame (maximum ~640 x 480) + JPEG encode (78% quality)
+      |
+      v
+POST /analyze with Base64 image
+      |
+      v
+FastAPI Backend
+      |
+      v
+Base64 JPEG Frame Decoder
+      |
+      v
+MediaPipe Face Detection
+      |
+      +------------------------------+
+      |                              |
+      v                              v
+Face Position / Distance         Rule-Based Risk Engine
+      |                              |
+      +--------------+---------------+
+                     v
+              AnalyzeResponse
+                     |
+                     v
+       React Dashboard, Alerts, and Statistics
 ```
 
-## 🚀 Installation
+> The backend never calls `cv2.VideoCapture()`; it analyzes only browser-provided frames.
 
-### Prerequisites
-
-- Node.js 20 or later
-- Python 3.11 or later
-- A browser with webcam permission support
-
-### Backend setup
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-The backend is available at `http://localhost:8000`, with interactive OpenAPI documentation at `http://localhost:8000/docs`.
-
-### Frontend setup
-
-Open a second terminal:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Open the Vite URL shown in the terminal, normally `http://localhost:5173`.
-
-### Optional Docker setup
-
-```bash
-docker compose up --build
-```
-
-This serves the frontend on `http://localhost:5173` and the backend on `http://localhost:8000`.
-
-## 🔌 API Overview
+## Backend API
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `GET` | `/` | Returns application name, version, and running status. |
-| `GET` | `/health` | Returns the current scaffold health payload. |
-| `POST` | `/analyze` | Accepts one browser-captured JPEG frame and returns monitoring signals. |
+| `GET` | `/health` | Returns the current backend health payload. |
+| `POST` | `/analyze` | Accepts one browser-captured JPEG frame and returns monitoring data. |
 
 ### `POST /analyze`
 
@@ -185,7 +90,7 @@ Request body:
 ```json
 {
   "frame_id": 1,
-  "timestamp": "2026-07-22T12:00:00Z",
+  "timestamp": "2026-07-23T12:00:00Z",
   "image": "base64-encoded-jpeg-data"
 }
 ```
@@ -209,54 +114,143 @@ Response body:
 }
 ```
 
-## 📊 Risk Scoring Logic
+## Risk Scoring
 
-The current risk engine is deterministic and face-count based. Scores are clamped between 0 and 100.
+The current risk engine is deterministic and based only on face-count state. Scores are clamped between 0 and 100.
 
-| Face detection result | Risk score | Status | Recommendation |
+| Face detection state | Risk score | Status | Recommendation |
 | --- | ---: | --- | --- |
-| One Face Detected | 10 | System Ready | Monitoring |
-| No Face | 40 | Attention Required | Review Session |
-| Multiple Faces | 60 | High Risk | Investigate |
+| One Face Detected | 10% | System Ready | Monitoring |
+| No Face | 40% | Attention Required | Review Session |
+| Multiple Faces | 60% | High Risk | Investigate |
 
-## ✅ Current Capabilities
+## Installation and Setup
 
-Today, the project can capture a webcam preview in the browser, package current frames efficiently for REST transfer, and use MediaPipe Face Detection on the server to identify whether there are zero, one, or multiple faces. The dashboard reflects the returned face signal, risk score, status, and recommendation during its five-second polling cycle.
+### Prerequisites
 
-The dashboard keeps a current-session alert history, avoiding consecutive duplicate face-status alerts. It also tracks duration, processed frames, alert count, current risk, average risk, and maximum risk, then shows an end-of-session summary when the interviewer ends the session.
+- Node.js 20 or later
+- Python 3.11 or later
+- A browser with webcam support and permission enabled
 
-For exactly one detected face, the backend uses the existing MediaPipe relative bounding box to provide face-position and apparent camera-distance guidance. The browser owns the camera, while the backend processes only the image data it receives.
+### Backend
 
-## 🔮 Future Enhancements
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+The API is available at `http://localhost:8000`. Interactive API documentation is available at `http://localhost:8000/docs`.
+
+### Frontend
+
+Open a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL shown in the terminal, normally `http://localhost:5173`.
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+Docker serves the frontend at `http://localhost:5173` and the backend at `http://localhost:8000`.
+
+## Usage
+
+1. Start the backend and frontend.
+2. Open the frontend in a supported browser.
+3. Select **Start Interview**, review the consent information, and provide consent.
+4. Allow browser camera access on the interview page.
+5. Review the dashboard as it refreshes monitoring data every five seconds.
+6. Use **End session** to stop polling and view the Session Summary.
+
+## Folder Structure
+
+```text
+Interview-Integrity-Detector/
+├── frontend/
+│   ├── src/
+│   │   ├── api/                 Axios API client
+│   │   ├── components/          Camera, dashboard, alert, and statistics UI
+│   │   ├── hooks/               Monitoring polling and session statistics hooks
+│   │   ├── pages/               Landing, consent, and interview pages
+│   │   └── types/               TypeScript API interfaces
+│   ├── package.json
+│   └── vite.config.ts
+├── backend/
+│   ├── app/
+│   │   ├── api/                 FastAPI route definitions
+│   │   ├── models/              Pydantic request and response models
+│   │   ├── services/            Monitoring orchestration and risk engine
+│   │   ├── utils/               Logging utility
+│   │   ├── vision/              Frame decoding and MediaPipe validation
+│   │   ├── config.py
+│   │   └── main.py
+│   ├── requirements.txt
+│   └── README.md
+├── docs/
+├── presentation/
+├── screenshots/
+├── tests/
+├── docker-compose.yml
+└── README.md
+```
+
+## Screenshots
+
+| Screenshot | Description |
+| --- | --- |
+| [01-landing-page.png](screenshots/01-landing-page.png) | Landing page |
+| [01_live_dashboard.png](screenshots/01_live_dashboard.png) | Live monitoring dashboard |
+| [02-backend-api-swagger.png](screenshots/02-backend-api-swagger.png) | FastAPI Swagger documentation |
+| [02_backend_api_running.png](screenshots/02_backend_api_running.png) | Backend API running |
+| [03-one-face-detected.png](screenshots/03-one-face-detected.png) | One-face monitoring result |
+| [04-no-face-detected.png](screenshots/04-no-face-detected.png) | No-face monitoring result |
+| [05-multiple-faces-detected.png](screenshots/05-multiple-faces-detected.png) | Multiple-face monitoring result |
+| [06-frontend-running.png](screenshots/06-frontend-running.png) | Frontend development server |
+| [09_face_position_right.png](screenshots/09_face_position_right.png) | Face-position guidance |
+| [10_face_position_left_distance.png](screenshots/10_face_position_left_distance.png) | Face-position and camera-distance guidance |
+| [11_no_face_position.png](screenshots/11_no_face_position.png) | No-face position state |
+| [12_session_statistics_alert_history.png](screenshots/12_session_statistics_alert_history.png) | Session statistics and alert history |
+| [13_monitoring_summary.png](screenshots/13_monitoring_summary.png) | End-of-session monitoring summary |
+
+## Limitations
+
+- This is a hackathon prototype, not a complete production integrity platform.
+- Current analysis is limited to face count and simple face-box framing heuristics for individual submitted frames.
+- Face-position and camera-distance guidance are not identity, gaze, head-pose, or emotion analysis.
+- Browser camera permission is required.
+- The health endpoint currently returns a static scaffold payload.
+- Human reviewers should make final decisions using full interview context.
+- The system cannot guarantee detection of every cheating method or directly identify AI interview assistants.
+
+## Future Improvements
 
 - Eye tracking and gaze estimation
 - Head-pose estimation
 - Object and phone detection
-- Audio behaviour and speech-pattern analysis
-- Additional behaviour analytics
-- Learned risk-prediction models
+- Audio and speech-pattern analysis
 - Session persistence, authentication, and reviewer workflows
-- Test coverage and production observability
+- Expanded automated test coverage and production observability
 
-## ⚠️ Limitations
-
-- This is a hackathon prototype, not a complete production integrity platform.
-- Current analysis is limited to face presence and face count in individual submitted frames.
-- Face position and apparent distance are simple bounding-box heuristics, not identity, gaze, or pose analysis.
-- Camera permission is required for browser-frame monitoring.
-- The current health endpoint still returns a static scaffold payload.
-- A human reviewer should make the final decision using full interview context.
-- The system cannot guarantee detection of every cheating method or directly identify AI interview assistants.
-
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome. Please open an issue to discuss a proposed change, then submit a focused pull request with clear context and appropriate tests where available.
 
-## 📄 License
+## License
 
 MIT License — placeholder. Add a `LICENSE` file before distributing the project.
 
-## 👤 Author
+## Author
 
 **Abhijeet**  
 ME Embedded Systems  
