@@ -332,8 +332,7 @@ Interview-Integrity-Detector/
 
 ### Behavior Analysis
 
-![Behavior Analysis Dashboard](screenshots/14_behavior_analysis_dashboard.png.png)
-
+![Behavior Analysis Dashboard](screenshots/14_behavior_analysis_dashboard.png)
 *Behavior Analysis card with gaze, head pose, alerts, and risk contribution.*
 
 ### Additional Screenshots
